@@ -1,4 +1,4 @@
-name: Build & Deploy KB (Hardened)
+name: Build & Deploy KB (Hardened One-Workflow)
 
 on:
   push:
@@ -20,6 +20,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Preflight: show workflows and Gemfile
+        run: |
+          echo "::group::Workflows"
+          ls -la .github/workflows || true
+          echo "::endgroup::"
+          echo "::group::Docs tree"
+          ls -la docs || true
+          echo "::endgroup::"
+          test -f docs/Gemfile || (echo "::error::docs/Gemfile is missing"; exit 1)
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -55,6 +65,8 @@ jobs:
 
       - name: Install Jekyll deps
         working-directory: docs
+        env:
+          BUNDLE_GEMFILE: docs/Gemfile
         run: |
           bundle config set path 'vendor/bundle'
           bundle install --jobs 4 --retry 3
@@ -65,8 +77,11 @@ jobs:
           python scripts/generate_baseurl_config.py
 
       - name: Build site with Jekyll (merge configs)
+        working-directory: docs
+        env:
+          BUNDLE_GEMFILE: docs/Gemfile
         run: |
-          bundle exec jekyll build -s ./docs -d ./_site -c ./docs/_config.yml,./docs/_config.deploy.yml
+          bundle exec jekyll build -s . -d ../_site -c ./_config.yml,./_config.deploy.yml
 
       - name: Internal link check
         run: |
