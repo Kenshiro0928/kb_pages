@@ -39,10 +39,16 @@ def main():
     entries = []
     for md in DOCS_KB.rglob("*.md"):
         rel = md.relative_to(DOCS_KB)
-        url = "/kb/" + str(rel).replace("\\","/").replace("index.md","")
         text = md.read_text(encoding="utf-8")
         fm, body = parse_front_matter(text)
         title = fm.get("title") or rel.stem
+        permalink = fm.get("permalink")
+        if isinstance(permalink, str) and permalink.strip():
+            url = permalink.strip()
+            if not url.endswith("/") and not url.endswith(".html"):
+                url += "/"
+        else:
+            url = "/kb/" + str(rel).replace("\\","/").replace("index.md","")
         entries.append({
             "title": title,
             "url": url,
@@ -51,5 +57,6 @@ def main():
         })
     OUT.write_text(json.dumps(entries, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"[OK] Wrote {OUT} ({len(entries)} docs)")
+
 if __name__ == "__main__":
     main()

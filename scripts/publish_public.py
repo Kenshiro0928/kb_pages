@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import shutil, re, sys, yaml
+import shutil, re, sys
+import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 KB_SRC = ROOT / "kb"
 DOCS_DST = ROOT / "docs" / "kb"
 
-# 「個人メモ」判定（公開除外）
 PERSONAL_FRAGS = (
     "/corpus/secret/",
     "/corpus/internal/",
@@ -29,18 +29,14 @@ def parse_front_matter(text):
         fm = {}
     return fm, text[m.end():]
 
-def synthesize_fm(path: Path, fm: dict, body: str) -> (dict, str):
-    """FMが欠落/不足していれば title/confidentiality/route_hint を補完して返す"""
+def synthesize_fm(path: Path, fm: dict, body: str):
     norm = "/" + str(path).replace("\\","/")
     is_personal = any(frag in norm.lower() for frag in PERSONAL_FRAGS)
-    # 個人メモは非公開固定（ただし通常はcopy前にスキップされる）
     default_conf = "internal" if is_personal else "public"
-
     title = fm.get("title")
     if not title:
         m = H1_RE.search(body)
         title = m.group(1).strip() if m else path.stem
-
     fm = dict(fm) if fm else {}
     fm.setdefault("title", title)
     fm.setdefault("confidentiality", default_conf)
@@ -49,12 +45,7 @@ def synthesize_fm(path: Path, fm: dict, body: str) -> (dict, str):
 
 def write_with_fm(dst: Path, fm: dict, body: str):
     dst.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        import yaml
-        front = yaml.safe_dump(fm, allow_unicode=True, sort_keys=False).strip()
-    except Exception:
-        # YAMLが無い環境でも最低限動くように単純成形
-        front = "\n".join(f"{k}: {v}" for k, v in fm.items())
+    front = yaml.safe_dump(fm, allow_unicode=True, sort_keys=False).strip()
     content = f"---\n{front}\n---\n\n{body}"
     dst.write_text(content, encoding="utf-8")
 
@@ -98,19 +89,15 @@ def main():
         if any(frag in norm for frag in PERSONAL_FRAGS):
             skipped_personal += 1
             continue
-
         text = md.read_text(encoding="utf-8")
         fm, body = parse_front_matter(text)
         fm2, body2 = synthesize_fm(md, fm, body)
-
-        # docs側へFM付与済みでコピー
         rel = md.relative_to(KB_SRC)
         dst = DOCS_DST / rel
         write_with_fm(dst, fm2, body2)
         copy_linked_assets(md, body2)
         published += 1
 
-    # すべてのディレクトリに index.md を保証
     for d in DOCS_DST.rglob("*"):
         if d.is_dir():
             ensure_index(d)

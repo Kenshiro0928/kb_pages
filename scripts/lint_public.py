@@ -7,7 +7,6 @@ KB_SRC = ROOT / "kb"
 
 FM_RE = re.compile(r'^---\s*\n(.*?)\n---\s*\n', re.DOTALL)
 
-# 個人メモ判定のみ厳格ブロック（ここにpublicが混入していたらfail）
 PERSONAL_FRAGS = (
     "/corpus/secret/",
     "/corpus/internal/",
@@ -17,7 +16,7 @@ PERSONAL_FRAGS = (
 )
 
 FANCY_QUOTES = ("“", "”", "‘", "’")
-ABSOLUTE_LINK = re.compile(r'\]\((/(?!kb_pages/)[^\)]+)\)')  # naive
+ABSOLUTE_LINK = re.compile(r'\]\((/(?!kb_pages/)[^\)]+)\)')
 
 def parse_front_matter(text):
     m = FM_RE.match(text)
@@ -30,8 +29,7 @@ def parse_front_matter(text):
     return fm, text[m.end():]
 
 def main():
-    errors = []
-    warnings = []
+    errors, warnings = [], []
     for md in KB_SRC.rglob("*.md"):
         text = md.read_text(encoding="utf-8")
         parsed = parse_front_matter(text)
@@ -45,11 +43,9 @@ def main():
         if is_personal and is_public:
             errors.append(f"[FORBIDDEN] personal memo marked public: {md}")
 
-        # 非公開やFM無しはOK（publish側でpublicに自動化）
         if parsed is None:
             warnings.append(f"[WARN:NO-FM] {md} (will be defaulted at publish unless personal)")
 
-        # 情報だけは流す（ビルド停止まではしない）
         for q in FANCY_QUOTES:
             if q in text and "{{" in text:
                 warnings.append(f"[WARN:LIQUID-QUOTE] Fancy quote {q} near Liquid in {md}")

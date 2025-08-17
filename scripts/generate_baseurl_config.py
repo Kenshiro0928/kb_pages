@@ -5,11 +5,14 @@ import os
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "_config.deploy.yml"
 
-repo = os.getenv("GITHUB_REPOSITORY", "")
-owner, _, name = repo.partition("/")
-url = f"https://{owner}.github.io" if owner else ""
-baseurl = "" if name.endswith(".github.io") else ("/" + name if name else "")
+url = os.getenv("PAGES_URL")
+baseurl = os.getenv("PAGES_BASEURL")
 
-cfg = f"url: \"{url}\"\nbaseurl: \"{baseurl}\"\n"
-OUT.write_text(cfg, encoding="utf-8")
-print(f"[OK] Wrote {OUT}:\n{cfg}")
+if not url or not baseurl:
+    repo = os.getenv("GITHUB_REPOSITORY", "")
+    owner, _, name = repo.partition("/")
+    url = url or (f"https://{owner}.github.io" if owner else "")
+    baseurl = baseurl or ("" if name.endswith(".github.io") else ("/" + name if name else ""))
+
+OUT.write_text(f'url: "{url}"\nbaseurl: "{baseurl}"\n', encoding="utf-8")
+print(f"[OK] Wrote {OUT}:\nurl={url}\nbaseurl={baseurl}\n")

@@ -1,17 +1,12 @@
-# KB + GitHub Pages（Hardened 自動配信）
+# KB Pages (Ultra Hardened)
 最終更新: 2025-08-17
 
-この構成は、よく出るバグを**事前に防ぐ/自動で修復**します。
-
-## 防ぐもの
-- `confidentiality: public` の**誤配置/未設定**（lintでfail）
-- Liquidの**全角引用符**や `/kb/` 直書き等 → **自動でASCII化/relative_url化**
-- **baseurl未設定**（リポジトリから自動検出してJekyllに統合）
-- **index.md欠落**（公開抽出時に index.md のstubを自動生成）
-- **内部リンク切れ**（ビルド後に _site をクロールしてチェック）
-- **巨大アセット**（>10MBはwarning）
-
-## 使い方
-1. リポジトリ直下にこの内容を展開して上書き
-2. GitHub → Settings → Pages → **Build and deployment = GitHub Actions**
-3. `main` にpush → lint→抽出→整形→索引→Jekyll→リンク検査→デプロイ の順で自動実行
+**“手当ゼロ・事故ゼロ”**を目標に、CIで次を自動化：
+- 個人メモ除外・その他は**自動公開**（不足FM注入）
+- Obsidianの**[[wikilinks]] をMarkdownへ**解決（未解決はテキスト化）
+- **Liquid/リンク**：全角→ASCII、擬似Liquid補正、絶対パス→relative_url
+- **画像最適化**（JPEG/PNG）
+- **検索インデックス**（permalink優先）
+- **url/baseurl自動生成**（env override可）
+- **内部リンク断/大小文字衝突/シークレット漏洩**のブロック
+- **10MB超アセット警告**（`ASSET_LIMIT_MB` 環境変数で変更）

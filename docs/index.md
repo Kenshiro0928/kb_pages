@@ -7,4 +7,3 @@ title: "KB Site"
 内部資料や個人メモは `kb/` に残り、サイトには出ません。
 
 - [KB ホーム（公開コンテンツ）]({{ "/kb/" | relative_url }})
-- （任意）サイトマップ：`/sitemap.xml`

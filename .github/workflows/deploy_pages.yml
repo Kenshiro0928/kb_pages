@@ -1,9 +1,8 @@
-name: Build and Deploy KB
+name: Build & Deploy KB (Ultra Hardened)
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -12,7 +11,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: "pages"
   cancel-in-progress: true
 
 jobs:
@@ -22,81 +21,76 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Preflight: 必要ファイルが無ければ自動生成
-      - name: Preflight
-        shell: bash
-        run: |
-          set -e
-          echo "::group::Workflows"; ls -la .github/workflows || true; echo "::endgroup::"
-          mkdir -p docs
-          echo "::group::Docs tree"; ls -la docs || true; echo "::endgroup::"
-          if [ ! -f docs/Gemfile ]; then
-            echo 'source "https://rubygems.org"' > docs/Gemfile
-            echo 'gem "github-pages", group: :jekyll_plugins' >> docs/Gemfile
-          fi
-          if [ ! -f docs/_config.yml ]; then
-            echo 'title: "KB"' > docs/_config.yml
-            echo 'theme: minima' >> docs/_config.yml
-            echo 'markdown: kramdown' >> docs/_config.yml
-            echo 'plugins:' >> docs/_config.yml
-            echo '  - jekyll-sitemap' >> docs/_config.yml
-            echo '  - jekyll-seo-tag' >> docs/_config.yml
-          fi
-
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.11'
 
       - name: Install Python deps
-        run: python -m pip install --upgrade pip pyyaml
+        run: |
+          python -m pip install --upgrade pip pyyaml pillow
 
-      - name: Lint
-        run: python scripts/lint_public.py
+      - name: Lint (personal memos protected)
+        run: |
+          python scripts/lint_public.py
 
-      - name: Publish public subset
-        run: python scripts/publish_public.py
+      - name: Publish public subset (kb -> docs/kb) with FM injection
+        run: |
+          python scripts/publish_public.py
 
-      - name: Sanitize markdown
-        run: python scripts/sanitize_liquid_and_links.py
+      - name: Resolve Obsidian wikilinks
+        run: |
+          python scripts/resolve_wikilinks.py
 
-      - name: Build search index
-        run: python scripts/build_search_index.py
+      - name: Sanitize Markdown (Liquid/links; code-fence-aware)
+        run: |
+          python scripts/sanitize_liquid_and_links.py
+
+      - name: Optimize images (JPEG/PNG)
+        run: |
+          python scripts/optimize_images.py
+
+      - name: Build search-index.json (permalink-aware)
+        run: |
+          python scripts/build_search_index.py
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.1"
+          ruby-version: '3.1'
           bundler-cache: true
+          working-directory: docs
 
       - name: Install Jekyll deps
         working-directory: docs
-        env:
-          BUNDLE_GEMFILE: Gemfile
         run: |
           bundle config set path 'vendor/bundle'
           bundle install --jobs 4 --retry 3
           bundle exec jekyll -v
 
-      - name: Generate deploy config
-        run: python scripts/generate_baseurl_config.py
+      - name: Generate deploy config (url/baseurl with env override)
+        run: |
+          python scripts/generate_baseurl_config.py
 
       - name: Build site with Jekyll
-        working-directory: docs
-        env:
-          BUNDLE_GEMFILE: Gemfile
-        run: bundle exec jekyll build -s . -d ../_site -c ./_config.yml,./_config.deploy.yml
-
-      - name: Internal link check
-        run: python scripts/check_site_internal_links.py
-
-      - name: Enforce asset budgets
-        run: python scripts/enforce_asset_budgets.py
-
-      - name: List published files
         run: |
-          echo "Published files:"
-          find docs/kb -type f | sort | sed 's/^/ - /'
+          bundle exec jekyll build -s ./docs -d ./_site -c ./docs/_config.yml,./docs/_config.deploy.yml
+
+      - name: Check internal links (href/src)
+        run: |
+          python scripts/check_site_internal_links.py
+
+      - name: Detect case-collision (Windows/macOS vs Pages)
+        run: |
+          python scripts/detect_case_collisions.py
+
+      - name: Secret scan (basic patterns)
+        run: |
+          python scripts/secret_scan.py
+
+      - name: Enforce asset budgets (warn >10MB; set ASSET_LIMIT_MB to override)
+        run: |
+          python scripts/enforce_asset_budgets.py
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
