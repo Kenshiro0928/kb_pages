@@ -1,0 +1,4 @@
+source "https://rubygems.org"
+
+# Use the GitHub Pages dependency set (pins Jekyll & plugins to supported versions)
+gem "github-pages", group: :jekyll_plugins

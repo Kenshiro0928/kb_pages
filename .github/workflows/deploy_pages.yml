@@ -52,13 +52,14 @@ jobs:
       - name: Install Jekyll deps
         working-directory: docs
         run: |
-          bundle init || true
-          bundle add github-pages --skip-install --group jekyll_plugins
+          bundle config set path 'vendor/bundle'
           bundle install --jobs 4 --retry 3
+          bundle exec jekyll -v
 
       - name: Build site with Jekyll
+        working-directory: docs
         run: |
-          bundle exec jekyll build --source ./docs --destination ./_site
+          bundle exec jekyll build -s . -d ../_site
 
       - name: Show published files
         run: |
