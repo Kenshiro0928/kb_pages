@@ -46,7 +46,6 @@ def copy_file(src: Path):
     shutil.copy2(src, dst)
 
 def copy_linked_assets(md_path: Path, body: str):
-    # Copy assets referenced by markdown image links if they are local files
     base = md_path.parent
     for link in LINK_RE.findall(body):
         if "://" in link:
@@ -72,19 +71,19 @@ def main():
         shutil.rmtree(DOCS_DST)
     DOCS_DST.mkdir(parents=True, exist_ok=True)
 
+    count = 0
     for md in KB_SRC.rglob("*.md"):
         if should_include(md):
             text = md.read_text(encoding="utf-8")
             fm, body = parse_front_matter(text)
             copy_file(md)
             copy_linked_assets(md, body)
-
+            count += 1
     # Ensure index.md in each dir under docs/kb
     for d in DOCS_DST.rglob("*"):
         if d.is_dir():
             ensure_index(d)
-
-    print("[OK] Published public subset to docs/kb/")
+    print(f"[OK] Published {count} public docs to docs/kb/")
 
 if __name__ == "__main__":
     main()

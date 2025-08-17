@@ -5,7 +5,7 @@ plugins:
   - jekyll-sitemap
   - jekyll-seo-tag
 
-# For Project Pages, set these (and remove comments):
+# Project Pages の場合は設定（ユーザー/組織Pagesなら url のみ）
 # url: "https://<USER>.github.io"
 # baseurl: "/<REPO>"
 
