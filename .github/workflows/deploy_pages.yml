@@ -22,31 +22,38 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 参考出力と Gemfile 自動生成（なければ作る）
+      # Preflight: 必要ファイルが無ければ自動生成
       - name: Preflight
+        shell: bash
         run: |
-          echo "::group::Workflows"
-          ls -la .github/workflows || true
-          echo "::endgroup::"
-          echo "::group::Docs tree"
-          ls -la docs || true
-          echo "::endgroup::"
+          set -e
+          echo "::group::Workflows"; ls -la .github/workflows || true; echo "::endgroup::"
+          mkdir -p docs
+          echo "::group::Docs tree"; ls -la docs || true; echo "::endgroup::"
           if [ ! -f docs/Gemfile ]; then
-            echo "docs/Gemfile not found. creating a minimal one..."
             cat > docs/Gemfile <<'RUBY'
 source "https://rubygems.org"
 gem "github-pages", group: :jekyll_plugins
 RUBY
           fi
+          if [ ! -f docs/_config.yml ]; then
+            cat > docs/_config.yml <<'YML'
+title: "KB"
+theme: minima
+markdown: kramdown
+plugins:
+  - jekyll-sitemap
+  - jekyll-seo-tag
+YML
+          fi
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install Python deps
-        run: |
-          python -m pip install --upgrade pip pyyaml
+        run: python -m pip install --upgrade pip pyyaml
 
       - name: Lint
         run: python scripts/lint_public.py
@@ -63,7 +70,8 @@ RUBY
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.1'
+          ruby-version: "3.1"
+          bundler-cache: true
 
       - name: Install Jekyll deps
         working-directory: docs
@@ -81,8 +89,7 @@ RUBY
         working-directory: docs
         env:
           BUNDLE_GEMFILE: Gemfile
-        run: |
-          bundle exec jekyll build -s . -d ../_site -c ./_config.yml,./_config.deploy.yml
+        run: bundle exec jekyll build -s . -d ../_site -c ./_config.yml,./_config.deploy.yml
 
       - name: Internal link check
         run: python scripts/check_site_internal_links.py
@@ -112,3 +119,4 @@ RUBY
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
+        uses: actions/deploy-pages@v4
