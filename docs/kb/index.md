@@ -6,3 +6,5 @@ title: "KB Home (Public)"
 
 公開可（`confidentiality: public`）のエントリだけが自動掲載されます。  
 フォルダごとの `index.md` が目次ページになります。
+
+- [トップに戻る]({{ "/" | relative_url }})

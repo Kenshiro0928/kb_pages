@@ -5,9 +5,9 @@ plugins:
   - jekyll-sitemap
   - jekyll-seo-tag
 
-# Project Pages の場合は設定（ユーザー/組織Pagesなら url のみ）
-# url: "https://<USER>.github.io"
-# baseurl: "/<REPO>"
+# Project Pages settings
+url: "https://kenshiro0928.github.io"
+baseurl: "/kb_pages"
 
 defaults:
   - scope: { path: "kb" }
