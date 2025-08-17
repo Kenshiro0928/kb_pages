@@ -6,11 +6,18 @@ ROOT = Path(__file__).resolve().parents[1]
 KB_SRC = ROOT / "kb"
 DOCS_DST = ROOT / "docs" / "kb"
 
-ALLOWED_CONF = {"public"}
-FM_RE = re.compile(r'^---\s*\n(.*?)\n---\s*\n', re.DOTALL)
-LINK_RE = re.compile(r'\!\[[^\]]*\]\(([^)]+)\)')
+# 「個人メモ」判定（公開除外）
+PERSONAL_FRAGS = (
+    "/corpus/secret/",
+    "/corpus/internal/",
+    "/periodic_notes/",
+    "/.obsidian/",
+    "/canvas/",
+)
 
-FORBIDDEN_PATH_FRAGS = ("secret", ".obsidian", "verifications")
+FM_RE = re.compile(r'^---\s*\n(.*?)\n---\s*\n', re.DOTALL)
+H1_RE = re.compile(r'^\s*#\s+(.+?)\s*$', re.MULTILINE)
+IMG_LINK_RE = re.compile(r'\!\[[^\]]*\]\(([^)]+)\)')
 
 def parse_front_matter(text):
     m = FM_RE.match(text)
@@ -22,27 +29,44 @@ def parse_front_matter(text):
         fm = {}
     return fm, text[m.end():]
 
-def should_include(md_path: Path) -> bool:
-    parts = [p.lower() for p in md_path.parts]
-    if any(seg in parts for seg in FORBIDDEN_PATH_FRAGS):
-        return False
-    try:
-        text = md_path.read_text(encoding="utf-8")
-    except Exception:
-        return False
-    fm, _ = parse_front_matter(text)
-    conf = (fm or {}).get("confidentiality", "internal")
-    return str(conf).lower() in ALLOWED_CONF
+def synthesize_fm(path: Path, fm: dict, body: str) -> (dict, str):
+    """FMが欠落/不足していれば title/confidentiality/route_hint を補完して返す"""
+    norm = "/" + str(path).replace("\\","/")
+    is_personal = any(frag in norm.lower() for frag in PERSONAL_FRAGS)
+    # 個人メモは非公開固定（ただし通常はcopy前にスキップされる）
+    default_conf = "internal" if is_personal else "public"
 
-def copy_file(src: Path):
-    rel = src.relative_to(KB_SRC)
-    dst = DOCS_DST / rel
+    title = fm.get("title")
+    if not title:
+        m = H1_RE.search(body)
+        title = m.group(1).strip() if m else path.stem
+
+    fm = dict(fm) if fm else {}
+    fm.setdefault("title", title)
+    fm.setdefault("confidentiality", default_conf)
+    fm.setdefault("route_hint", "Balanced")
+    return fm, body
+
+def write_with_fm(dst: Path, fm: dict, body: str):
     dst.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(src, dst)
+    try:
+        import yaml
+        front = yaml.safe_dump(fm, allow_unicode=True, sort_keys=False).strip()
+    except Exception:
+        # YAMLが無い環境でも最低限動くように単純成形
+        front = "\n".join(f"{k}: {v}" for k, v in fm.items())
+    content = f"---\n{front}\n---\n\n{body}"
+    dst.write_text(content, encoding="utf-8")
+
+def copy_asset(src: Path):
+    rel = src.relative_to(KB_SRC)
+    out = DOCS_DST / rel
+    out.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, out)
 
 def copy_linked_assets(md_path: Path, body: str):
     base = md_path.parent
-    for link in LINK_RE.findall(body):
+    for link in IMG_LINK_RE.findall(body):
         if "://" in link:
             continue
         asset = (base / link).resolve()
@@ -51,12 +75,12 @@ def copy_linked_assets(md_path: Path, body: str):
         except ValueError:
             continue
         if asset.exists() and asset.is_file():
-            copy_file(asset)
+            copy_asset(asset)
 
 def ensure_index(dir_path: Path):
     idx = dir_path / "index.md"
     if not idx.exists():
-        idx.write_text(f"---\ntitle: \"{dir_path.name}\"\n---\n\n# {dir_path.name}\n", encoding="utf-8")
+        idx.write_text(f"---\ntitle: \"{dir_path.name}\"\nconfidentiality: public\n---\n\n# {dir_path.name}\n", encoding="utf-8")
 
 def main():
     if not KB_SRC.exists():
@@ -66,19 +90,32 @@ def main():
         shutil.rmtree(DOCS_DST)
     DOCS_DST.mkdir(parents=True, exist_ok=True)
 
-    count = 0
-    for md in KB_SRC.rglob("*.md"):
-        if should_include(md):
-            text = md.read_text(encoding="utf-8")
-            fm, body = parse_front_matter(text)
-            copy_file(md)
-            copy_linked_assets(md, body)
-            count += 1
+    published = 0
+    skipped_personal = 0
 
+    for md in KB_SRC.rglob("*.md"):
+        norm = "/" + str(md).replace("\\","/").lower()
+        if any(frag in norm for frag in PERSONAL_FRAGS):
+            skipped_personal += 1
+            continue
+
+        text = md.read_text(encoding="utf-8")
+        fm, body = parse_front_matter(text)
+        fm2, body2 = synthesize_fm(md, fm, body)
+
+        # docs側へFM付与済みでコピー
+        rel = md.relative_to(KB_SRC)
+        dst = DOCS_DST / rel
+        write_with_fm(dst, fm2, body2)
+        copy_linked_assets(md, body2)
+        published += 1
+
+    # すべてのディレクトリに index.md を保証
     for d in DOCS_DST.rglob("*"):
         if d.is_dir():
             ensure_index(d)
 
-    print(f"[OK] Published {count} public docs to docs/kb/")
+    print(f"[OK] Published {published} docs to docs/kb/ (skipped personal: {skipped_personal})")
+
 if __name__ == "__main__":
     main()
