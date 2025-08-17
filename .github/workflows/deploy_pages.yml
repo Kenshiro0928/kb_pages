@@ -1,8 +1,8 @@
-name: Build & Deploy KB (Hardened One-Workflow)
+name: Build & Deploy KB (Hardened)
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
   workflow_dispatch:
 
 permissions:
@@ -18,10 +18,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: "Checkout"
         uses: actions/checkout@v4
 
-      - name: Preflight: show workflows and Gemfile
+      - name: "Preflight: show workflows and Gemfile"
         run: |
           echo "::group::Workflows"
           ls -la .github/workflows || true
@@ -31,39 +31,38 @@ jobs:
           echo "::endgroup::"
           test -f docs/Gemfile || (echo "::error::docs/Gemfile is missing"; exit 1)
 
-      - name: Set up Python
+      - name: "Set up Python"
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
-      - name: Install Python deps
+      - name: "Install Python deps"
         run: |
           python -m pip install --upgrade pip pyyaml
 
-      - name: Lint public exposure
+      - name: "Lint public exposure"
         run: |
           python scripts/lint_public.py
 
-      - name: Publish public subset (kb -> docs/kb)
+      - name: "Publish public subset (kb -> docs/kb)"
         run: |
           python scripts/publish_public.py
 
-      - name: Sanitize Liquid & links (prevent curly quotes / absolute paths)
+      - name: "Sanitize Liquid & links (prevent curly quotes / absolute paths)"
         run: |
           python scripts/sanitize_liquid_and_links.py
 
-      - name: Build search-index.json
+      - name: "Build search-index.json"
         run: |
           python scripts/build_search_index.py
 
-      - name: Setup Ruby
+      - name: "Setup Ruby"
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.1'
+          ruby-version: "3.1"
           bundler-cache: true
-          working-directory: docs
 
-      - name: Install Jekyll deps
+      - name: "Install Jekyll deps"
         working-directory: docs
         env:
           BUNDLE_GEMFILE: docs/Gemfile
@@ -72,45 +71,28 @@ jobs:
           bundle install --jobs 4 --retry 3
           bundle exec jekyll -v
 
-      - name: Generate deploy config (url/baseurl from repo)
+      - name: "Generate deploy config (url/baseurl from repo)"
         run: |
           python scripts/generate_baseurl_config.py
 
-      - name: Build site with Jekyll (merge configs)
+      - name: "Build site with Jekyll (merge configs)"
         working-directory: docs
         env:
           BUNDLE_GEMFILE: docs/Gemfile
         run: |
           bundle exec jekyll build -s . -d ../_site -c ./_config.yml,./_config.deploy.yml
 
-      - name: Internal link check
+      - name: "Internal link check"
         run: |
           python scripts/check_site_internal_links.py
 
-      - name: Enforce asset budgets (warn >10MB)
+      - name: "Enforce asset budgets (warn >10MB)"
         run: |
           python scripts/enforce_asset_budgets.py
 
-      - name: Show published files
+      - name: "Show published files"
         run: |
           echo "Published files:"
           find docs/kb -type f | sort | sed 's/^/ - /'
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./_site
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: "Setu
