@@ -31,20 +31,16 @@ jobs:
           mkdir -p docs
           echo "::group::Docs tree"; ls -la docs || true; echo "::endgroup::"
           if [ ! -f docs/Gemfile ]; then
-            cat > docs/Gemfile <<'RUBY'
-source "https://rubygems.org"
-gem "github-pages", group: :jekyll_plugins
-RUBY
+            echo 'source "https://rubygems.org"' > docs/Gemfile
+            echo 'gem "github-pages", group: :jekyll_plugins' >> docs/Gemfile
           fi
           if [ ! -f docs/_config.yml ]; then
-            cat > docs/_config.yml <<'YML'
-title: "KB"
-theme: minima
-markdown: kramdown
-plugins:
-  - jekyll-sitemap
-  - jekyll-seo-tag
-YML
+            echo 'title: "KB"' > docs/_config.yml
+            echo 'theme: minima' >> docs/_config.yml
+            echo 'markdown: kramdown' >> docs/_config.yml
+            echo 'plugins:' >> docs/_config.yml
+            echo '  - jekyll-sitemap' >> docs/_config.yml
+            echo '  - jekyll-seo-tag' >> docs/_config.yml
           fi
 
       - name: Setup Python
