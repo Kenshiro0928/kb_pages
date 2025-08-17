@@ -73,8 +73,9 @@ jobs:
           python scripts/generate_baseurl_config.py
 
       - name: Build site with Jekyll
+        working-directory: docs
         run: |
-          bundle exec jekyll build -s ./docs -d ./_site -c ./docs/_config.yml,./docs/_config.deploy.yml
+          bundle exec jekyll build -s ./ -d ../_site -c ./_config.yml,./_config.deploy.yml
 
       - name: Check internal links (href/src)
         run: |
