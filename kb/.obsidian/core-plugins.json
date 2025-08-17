@@ -1,0 +1,9 @@
+{
+  "core-plugins": [
+    "file-explorer",
+    "global-search",
+    "graph",
+    "properties",
+    "outline"
+  ]
+}

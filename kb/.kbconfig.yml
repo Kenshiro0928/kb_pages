@@ -1,0 +1,19 @@
+naming:
+  pattern: "<type>-<YYYY-MM-DD>-<slug>"
+defaults:
+  route: Balanced
+  confidentiality: internal
+  qoc:
+    accuracy: 0.95
+    freshness_days: 90
+    trust: high
+folders:
+  attachments: "assets"
+  vault_root_is_kb: true
+evaluation:
+  ragas_threshold: 0.80
+  ais_pass_rate: 0.90
+  recall_at_100: 0.90
+routing:
+  recency_days: 90
+  low_latency_demote: 0.65
