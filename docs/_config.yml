@@ -5,10 +5,6 @@ plugins:
   - jekyll-sitemap
   - jekyll-seo-tag
 
-# Project Pages settings
-url: "https://kenshiro0928.github.io"
-baseurl: "/kb_pages"
-
 defaults:
   - scope: { path: "kb" }
     values: { layout: "kb" }

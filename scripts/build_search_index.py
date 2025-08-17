@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-"""
-Build a lightweight search index from docs/kb/**/*.md.
-Outputs kb/search-index.json with entries: title, url, headings, excerpt.
-"""
 from pathlib import Path
 import re, json, yaml
 
@@ -55,6 +51,5 @@ def main():
         })
     OUT.write_text(json.dumps(entries, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"[OK] Wrote {OUT} ({len(entries)} docs)")
-
 if __name__ == "__main__":
     main()

@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-"""
-Publish only `confidentiality: public` Markdown (and referenced local assets) from ./kb/ to ./docs/kb/.
-- Preserves relative structure (e.g., kb/routes/highfid.md -> docs/kb/routes/highfid.md).
-- Skips internal/secret by front matter and by path heuristics.
-- Adds index.md to each directory that lacks it (TOC stub).
-"""
 from pathlib import Path
 import shutil, re, sys, yaml
 
@@ -13,9 +7,10 @@ KB_SRC = ROOT / "kb"
 DOCS_DST = ROOT / "docs" / "kb"
 
 ALLOWED_CONF = {"public"}
-
 FM_RE = re.compile(r'^---\s*\n(.*?)\n---\s*\n', re.DOTALL)
-LINK_RE = re.compile(r'\!\[[^\]]*\]\(([^)]+)\)')  # image links
+LINK_RE = re.compile(r'\!\[[^\]]*\]\(([^)]+)\)')
+
+FORBIDDEN_PATH_FRAGS = ("secret", ".obsidian", "verifications")
 
 def parse_front_matter(text):
     m = FM_RE.match(text)
@@ -29,7 +24,7 @@ def parse_front_matter(text):
 
 def should_include(md_path: Path) -> bool:
     parts = [p.lower() for p in md_path.parts]
-    if any(seg in ("secret", "internal", ".obsidian", "verifications") for seg in parts):
+    if any(seg in parts for seg in FORBIDDEN_PATH_FRAGS):
         return False
     try:
         text = md_path.read_text(encoding="utf-8")
@@ -65,7 +60,7 @@ def ensure_index(dir_path: Path):
 
 def main():
     if not KB_SRC.exists():
-        print(f"[ERR] source not found: {KB_SRC}", file=sys.stderr)
+        print(f"::error::source not found: {KB_SRC}")
         sys.exit(1)
     if DOCS_DST.exists():
         shutil.rmtree(DOCS_DST)
@@ -79,11 +74,11 @@ def main():
             copy_file(md)
             copy_linked_assets(md, body)
             count += 1
-    # Ensure index.md in each dir under docs/kb
+
     for d in DOCS_DST.rglob("*"):
         if d.is_dir():
             ensure_index(d)
-    print(f"[OK] Published {count} public docs to docs/kb/")
 
+    print(f"[OK] Published {count} public docs to docs/kb/")
 if __name__ == "__main__":
     main()

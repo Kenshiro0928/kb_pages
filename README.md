@@ -1,21 +1,17 @@
-# KB + GitHub Pages 一体スタータ
+# KB + GitHub Pages（Hardened 自動配信）
 最終更新: 2025-08-17
 
-- `kb/`: Obsidian用のフルVault（internal/secret含む）
-- `docs/`: GitHub Pages公開サイト（**publicのみ**が入る）
-- `.github/workflows/publish_public.yml`: Actionsで `kb/` → `docs/kb/` に **publicだけ同期**して公開
-- `scripts/`: 公開同期・簡易検索インデックス生成スクリプト
+この構成は、よく出るバグを**事前に防ぐ/自動で修復**します。
+
+## 防ぐもの
+- `confidentiality: public` の**誤配置/未設定**（lintでfail）
+- Liquidの**全角引用符**や `/kb/` 直書き等 → **自動でASCII化/relative_url化**
+- **baseurl未設定**（リポジトリから自動検出してJekyllに統合）
+- **index.md欠落**（公開抽出時に index.md のstubを自動生成）
+- **内部リンク切れ**（ビルド後に _site をクロールしてチェック）
+- **巨大アセット**（>10MBはwarning）
 
 ## 使い方
-1. このリポジトリをGitHubへpush
-2. GitHub → **Settings > Pages > Build and deployment** を **GitHub Actions** に設定
-3. `main` にpushするとActionsが走り、**publicだけ**公開されます
-
-### 公開の判定
-各MarkdownのFront Matterで `confidentiality: public|internal|secret` を必ず指定。
-- `public` だけが `docs/kb/` にコピーされます（個人メモは `internal`/`secret` に）
-
-### Project Pages（ユーザー.github.io ではない通常リポジトリ）のとき
-`docs/_config.yml` の `url` と `baseurl` を設定してください（コメントを外して値を入れる）。
-
----
+1. リポジトリ直下にこの内容を展開して上書き
+2. GitHub → Settings → Pages → **Build and deployment = GitHub Actions**
+3. `main` にpush → lint→抽出→整形→索引→Jekyll→リンク検査→デプロイ の順で自動実行

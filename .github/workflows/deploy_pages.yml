@@ -1,4 +1,4 @@
-name: Build & Deploy KB (Actions full-auto)
+name: Build & Deploy KB (Hardened)
 
 on:
   push:
@@ -38,6 +38,10 @@ jobs:
         run: |
           python scripts/publish_public.py
 
+      - name: Sanitize Liquid & links (prevent curly quotes / absolute paths)
+        run: |
+          python scripts/sanitize_liquid_and_links.py
+
       - name: Build search-index.json
         run: |
           python scripts/build_search_index.py
@@ -56,10 +60,21 @@ jobs:
           bundle install --jobs 4 --retry 3
           bundle exec jekyll -v
 
-      - name: Build site with Jekyll
-        working-directory: docs
+      - name: Generate deploy config (url/baseurl from repo)
         run: |
-          bundle exec jekyll build -s . -d ../_site
+          python scripts/generate_baseurl_config.py
+
+      - name: Build site with Jekyll (merge configs)
+        run: |
+          bundle exec jekyll build -s ./docs -d ./_site -c ./docs/_config.yml,./docs/_config.deploy.yml
+
+      - name: Internal link check
+        run: |
+          python scripts/check_site_internal_links.py
+
+      - name: Enforce asset budgets (warn >10MB)
+        run: |
+          python scripts/enforce_asset_budgets.py
 
       - name: Show published files
         run: |
